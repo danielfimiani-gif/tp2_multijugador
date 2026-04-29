@@ -56,5 +56,10 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "tp2_photon.sln"
+    "dotnet.defaultSolution": "tp2_photon.sln",
+    "editor.formatOnSave": true,
+    "cSpell.language": "es, en",
+    "cSpell.words": [
+        "Behaviour"
+    ]
 }

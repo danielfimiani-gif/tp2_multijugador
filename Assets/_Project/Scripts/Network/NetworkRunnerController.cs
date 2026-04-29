@@ -1,0 +1,4 @@
+class NetworkRunnerController : MonoBehaviourSingleton<NetworkRunnerController>
+{
+
+}
