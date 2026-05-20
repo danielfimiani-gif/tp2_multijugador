@@ -23,8 +23,16 @@ public class MonoBehaviourSingleton<T> : MonoBehaviour where T : MonoBehaviour
     void Awake()
     {
         if (Instance != this)
+        {
             Destroy(gameObject);
+            return;
+        }
+
         else if (isPersistent)
             DontDestroyOnLoad(gameObject);
+
+        OnAwaken();
     }
+
+    protected virtual void OnAwaken() { }
 }
