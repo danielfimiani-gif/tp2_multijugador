@@ -1,11 +1,14 @@
+using System.Collections.Generic;
 using Fusion;
 using UnityEngine;
 
 public class PlayerCombat : NetworkBehaviour
 {
     [Header("Attack base")]
-    [SerializeField] private float attackCooldownSec = 0.25f;
-    [SerializeField] private float comboWindowSec = 0.5f;
+    [Tooltip("Tiempo mínimo entre clicks. Demasiado alto = combo lento, demasiado bajo = spam. 0.10-0.15 funciona bien para combo fluido.")]
+    [SerializeField] private float attackCooldownSec = 0.12f;
+    [Tooltip("Ventana para encadenar siguiente paso del combo. Si pasa, resetea a paso 1.")]
+    [SerializeField] private float comboWindowSec = 0.6f;
     [SerializeField] private int maxComboSteps = 3;
 
     [Header("Hitbox")]
@@ -17,11 +20,12 @@ public class PlayerCombat : NetworkBehaviour
     [SerializeField] private float[] damagePerStep = { 10f, 12f, 18f };
 
     [Header("Combo knockback (por paso)")]
+    [Tooltip("X = empuje horizontal (hacia atrás). Y = empuje vertical (hacia arriba). Para que se sienta a golpe lateral, X >> Y.")]
     [SerializeField] private Vector2[] baseKnockbackPerStep =
     {
-        new(3f, 4f),
-        new(4f, 5f),
-        new(7f, 9f)
+        new(5f, 2f),
+        new(7f, 3f),
+        new(12f, 5f)
     };
 
     [SerializeField] private float knockbackScalePerPercent = 0.08f;
@@ -36,11 +40,22 @@ public class PlayerCombat : NetworkBehaviour
     [Networked] private TickTimer ComboWindow { get; set; }
     [Networked] private int ComboStep { get; set; }
     [Networked] private NetworkButtons PreviousButtons { get; set; }
+    [Networked] private int AttackTriggerSeq { get; set; }
+    [Networked] private byte AttackTriggerStep { get; set; }
+    [Networked] private int HitTriggerSeq { get; set; }
+
+    private int _lastSeenAttackSeq;
+    private int _lastSeenHitSeq;
+
+    private int _cachedEffectiveMaxStep = -1;
+    private RuntimeAnimatorController _lastSeenController;
+    private readonly List<KeyValuePair<AnimationClip, AnimationClip>> _overridesScratch = new();
 
     private PlayerController _controller;
     private NetworkCharacterController _ncc;
     private PlayerStock _stock;
     private Animator _animator;
+    private NetworkMecanimAnimator _netAnimator;
     private int[] _attackHashes;
     private int _hitHash;
 
@@ -52,6 +67,7 @@ public class PlayerCombat : NetworkBehaviour
         _ncc = GetComponent<NetworkCharacterController>();
         _stock = GetComponent<PlayerStock>();
         _animator = GetComponentInChildren<Animator>();
+        _netAnimator = GetComponent<NetworkMecanimAnimator>();
 
         _attackHashes = new int[attackTriggers.Length];
         for (int i = 0; i < attackTriggers.Length; i++)
@@ -84,13 +100,15 @@ public class PlayerCombat : NetworkBehaviour
 
     private void PerformAttack()
     {
-        var step = ComboWindow.ExpiredOrNotRunning(Runner) ? 1 : Mathf.Min(ComboStep + 1, maxComboSteps);
+        var windowExpired = ComboWindow.ExpiredOrNotRunning(Runner);
+        var effectiveMax = GetEffectiveMaxStep();
+        var step = windowExpired ? 1 : Mathf.Min(ComboStep + 1, effectiveMax);
         ComboStep = step;
         AttackCooldown = TickTimer.CreateFromSeconds(Runner, attackCooldownSec);
         ComboWindow = TickTimer.CreateFromSeconds(Runner, comboWindowSec);
 
-        if (_animator != null && step - 1 < _attackHashes.Length)
-            _animator.SetTrigger(_attackHashes[step - 1]);
+        AttackTriggerStep = (byte)step;
+        AttackTriggerSeq++;
 
         var stepIdx = Mathf.Clamp(step - 1, 0, damagePerStep.Length - 1);
         var damage = damagePerStep.Length > 0 ? damagePerStep[stepIdx] : 10f;
@@ -130,15 +148,75 @@ public class PlayerCombat : NetworkBehaviour
         if (victimNCC != null)
             victimNCC.Velocity = kb;
 
-        if (victim._animator != null) victim._animator.SetTrigger(victim._hitHash);
+        victim.HitTriggerSeq++;
 
         RPC_OnHit(victim.Object.InputAuthority, Object.InputAuthority, damage, kb);
+    }
+
+    public override void Render()
+    {
+        if (AttackTriggerSeq != _lastSeenAttackSeq)
+        {
+            _lastSeenAttackSeq = AttackTriggerSeq;
+            var step = (int)AttackTriggerStep;
+            if (_animator != null && step > 0 && step - 1 < _attackHashes.Length)
+                _animator.SetTrigger(_attackHashes[step - 1]);
+        }
+
+        if (HitTriggerSeq != _lastSeenHitSeq)
+        {
+            _lastSeenHitSeq = HitTriggerSeq;
+            if (_animator != null) _animator.SetTrigger(_hitHash);
+        }
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     private void RPC_OnHit(PlayerRef victim, PlayerRef attacker, float damage, Vector3 knockback)
     {
-        Debug.Log($"[Hit] attacker={attacker} victim={victim} dmg={damage:F0}% kb={knockback}");
+    }
+
+    private int GetEffectiveMaxStep()
+    {
+        if (_animator == null) return maxComboSteps;
+
+        var current = _animator.runtimeAnimatorController;
+        if (current != _lastSeenController || _cachedEffectiveMaxStep < 0)
+        {
+            _lastSeenController = current;
+            _cachedEffectiveMaxStep = ComputeEffectiveMaxStep();
+        }
+        return _cachedEffectiveMaxStep;
+    }
+
+    private int ComputeEffectiveMaxStep()
+    {
+        var aoc = _animator.runtimeAnimatorController as AnimatorOverrideController;
+        if (aoc == null) return maxComboSteps;
+
+        _overridesScratch.Clear();
+        aoc.GetOverrides(_overridesScratch);
+
+        int count = 0;
+        for (int i = 0; i < attackTriggers.Length && i < maxComboSteps; i++)
+        {
+            var triggerName = attackTriggers[i];
+            if (HasValidOverride(triggerName))
+                count = i + 1;
+            else
+                break;
+        }
+        return Mathf.Max(1, count);
+    }
+
+    private bool HasValidOverride(string clipName)
+    {
+        for (int i = 0; i < _overridesScratch.Count; i++)
+        {
+            var kvp = _overridesScratch[i];
+            if (kvp.Key != null && kvp.Key.name == clipName)
+                return kvp.Value != null && kvp.Value != kvp.Key;
+        }
+        return false;
     }
 
     private void OnDrawGizmosSelected()

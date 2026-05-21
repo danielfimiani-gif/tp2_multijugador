@@ -9,8 +9,14 @@ public class PlayerController : NetworkBehaviour
     [SerializeField] private float airJumpImpulse = -1f;
 
     [Header("Visuals")]
-    [Tooltip("Transform child que contiene el modelo visual (mesh/sprite). Si está asignado, se flippea en X según Facing.")]
+    [Tooltip("Transform child que contiene el modelo visual (mesh/sprite). Si está asignado, se flippea en Y según Facing.")]
     [SerializeField] private Transform visualRoot;
+
+    [Tooltip("Array de AnimatorOverrideController, uno por personaje. Se asigna uno a cada jugador determinísticamente según PlayerRef.")]
+    [SerializeField] private AnimatorOverrideController[] characterOverrides;
+
+    [Tooltip("Scale uniforme aplicado al visualRoot por personaje (índice paralelo a characterOverrides). 0 o vacío = no se toca el scale.")]
+    [SerializeField] private float[] characterVisualScales;
 
     [Header("Animation params")]
     [SerializeField] private string speedParam = "Speed";
@@ -21,16 +27,22 @@ public class PlayerController : NetworkBehaviour
 
     [Networked] public int JumpsRemaining { get; private set; }
     [Networked] public sbyte Facing { get; private set; } = 1;
+    [Networked] public int CharacterIndex { get; private set; } = -1;
     [Networked] private NetworkButtons PreviousButtons { get; set; }
+    [Networked] private int JumpTriggerSeq { get; set; }
+
+    private int _lastSeenJumpSeq;
 
     private NetworkCharacterController _ncc;
     private Animator _animator;
+    private NetworkMecanimAnimator _netAnimator;
     private PlayerStock _stock;
     private int _speedHash;
     private int _groundedHash;
     private int _verticalSpeedHash;
     private int _deadHash;
     private int _jumpHash;
+    private int _lastAppliedCharacterIndex = -2;
 
     public Animator Animator => _animator;
 
@@ -38,6 +50,7 @@ public class PlayerController : NetworkBehaviour
     {
         _ncc = GetComponent<NetworkCharacterController>();
         _animator = GetComponentInChildren<Animator>();
+        _netAnimator = GetComponent<NetworkMecanimAnimator>();
         _stock = GetComponent<PlayerStock>();
         JumpsRemaining = maxJumps;
 
@@ -48,6 +61,41 @@ public class PlayerController : NetworkBehaviour
         _jumpHash = Animator.StringToHash(jumpTriggerParam);
 
         CameraFollow2D.Register(transform);
+
+        if (Object.HasInputAuthority)
+        {
+            var maxIdx = Mathf.Max(0, (characterOverrides?.Length ?? 1) - 1);
+            var localChoice = Mathf.Clamp(PlayerCharacterSelection.SelectedIndex, 0, maxIdx);
+            RPC_SetCharacterIndex(localChoice);
+        }
+
+        ApplyCharacterOverride();
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_SetCharacterIndex(int idx)
+    {
+        CharacterIndex = idx;
+    }
+
+    private void ApplyCharacterOverride()
+    {
+        if (_animator == null) return;
+        if (characterOverrides == null || characterOverrides.Length == 0) return;
+
+        var idx = CharacterIndex;
+        if (idx < 0 || idx >= characterOverrides.Length)
+            idx = Mathf.Abs(Object.InputAuthority.RawEncoded) % characterOverrides.Length;
+
+        var chosen = characterOverrides[idx];
+        if (chosen != null) _animator.runtimeAnimatorController = chosen;
+        _lastAppliedCharacterIndex = idx;
+
+        if (visualRoot != null && characterVisualScales != null && idx < characterVisualScales.Length)
+        {
+            var s = characterVisualScales[idx];
+            if (s > 0f) visualRoot.localScale = new Vector3(s, s, s);
+        }
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
@@ -81,7 +129,7 @@ public class PlayerController : NetworkBehaviour
                 _ncc.Jump(ignoreGrounded: true);
             JumpsRemaining--;
 
-            if (_animator != null) _animator.SetTrigger(_jumpHash);
+            JumpTriggerSeq++;
         }
 
         var pos = transform.position;
@@ -94,6 +142,15 @@ public class PlayerController : NetworkBehaviour
 
     public override void Render()
     {
+        if (CharacterIndex != _lastAppliedCharacterIndex)
+            ApplyCharacterOverride();
+
+        if (JumpTriggerSeq != _lastSeenJumpSeq)
+        {
+            _lastSeenJumpSeq = JumpTriggerSeq;
+            if (_animator != null) _animator.SetTrigger(_jumpHash);
+        }
+
         if (_animator != null && _ncc != null)
         {
             _animator.SetFloat(_speedHash, Mathf.Abs(_ncc.Velocity.x));
