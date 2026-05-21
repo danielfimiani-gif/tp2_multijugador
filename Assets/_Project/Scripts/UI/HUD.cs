@@ -33,7 +33,7 @@ public class HUD : MonoBehaviour
         if (backToMenuButton != null) backToMenuButton.onClick.AddListener(OnBackToMenu);
 
         foreach (var slot in slots)
-            if (slot != null && slot.Root != null) slot.Root.SetActive(false);
+            if (slot != null) slot.SetActive(false);
     }
 
     private void OnDestroy()
@@ -117,36 +117,32 @@ public class HUD : MonoBehaviour
         for (; idx < _sortedPlayers.Count && idx < slots.Length; idx++)
         {
             var slot = slots[idx];
-            if (slot == null || slot.Root == null) continue;
+            if (slot == null) continue;
 
-            slot.Root.SetActive(true);
+            slot.SetActive(true);
+            slot.SetName($"P{idx + 1}");
 
             var player = _sortedPlayers[idx];
             var obj = runner.GetPlayerObject(player);
 
-            if (slot.NameLabel != null) slot.NameLabel.text = $"P{idx + 1}";
-
-            if (obj != null)
+            if (obj == null)
             {
-                var combat = obj.GetComponent<PlayerCombat>();
-                var stock = obj.GetComponent<PlayerStock>();
-
-                if (slot.DamageLabel != null)
-                    slot.DamageLabel.text = combat != null ? $"{Mathf.RoundToInt(combat.DamagePercent)}%" : "0%";
-                if (slot.LivesLabel != null)
-                    slot.LivesLabel.text = stock != null ? $"Vidas: {Mathf.Max(0, stock.Lives)}" : "Vidas: -";
-                if (slot.KosLabel != null)
-                {
-                    gm.Kos.TryGet(player, out var kos);
-                    slot.KosLabel.text = $"KOs: {kos}";
-                }
+                slot.ClearStats();
+                continue;
             }
+
+            var combat = obj.GetComponent<PlayerCombat>();
+            var stock = obj.GetComponent<PlayerStock>();
+
+            slot.SetDamagePercent(combat != null ? combat.DamagePercent : 0f);
+            slot.SetLives(stock != null ? stock.Lives : 0);
+            gm.Kos.TryGet(player, out var kos);
+            slot.SetKos(kos);
         }
 
         for (; idx < slots.Length; idx++)
         {
-            if (slots[idx] != null && slots[idx].root != null)
-                slots[idx].root.SetActive(false);
+            if (slots[idx] != null) slots[idx].SetActive(false);
         }
     }
 
