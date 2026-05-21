@@ -42,6 +42,13 @@ public class MainMenuUI : MonoBehaviour
         WireButtons();
         SubscribeRunner();
         ShowMain();
+
+        if (!string.IsNullOrEmpty(NetworkRunnerController.PendingMessage))
+        {
+            SetError(NetworkRunnerController.PendingMessage);
+            NetworkRunnerController.PendingMessage = null;
+        }
+
         if (_runner != null) _ = _runner.JoinLobby();
     }
 

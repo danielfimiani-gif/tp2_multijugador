@@ -31,16 +31,28 @@ public class HUD : MonoBehaviour
     [SerializeField] private string mainMenuSceneName = "MainMenu";
 
     private NetworkRunnerController _runner;
+    private string _overrideStateText;
 
     private void Start()
     {
         _runner = NetworkRunnerController.Instance;
+        if (_runner != null) _runner.OnError += HandleRunnerError;
 
         if (endGamePanel != null) endGamePanel.SetActive(false);
         if (backToMenuButton != null) backToMenuButton.onClick.AddListener(OnBackToMenu);
 
         foreach (var slot in slots)
             if (slot != null && slot.root != null) slot.root.SetActive(false);
+    }
+
+    private void OnDestroy()
+    {
+        if (_runner != null) _runner.OnError -= HandleRunnerError;
+    }
+
+    private void HandleRunnerError(string message)
+    {
+        _overrideStateText = message;
     }
 
     private void Update()
@@ -77,6 +89,12 @@ public class HUD : MonoBehaviour
     private void UpdateStateLabel(GameManager gm)
     {
         if (stateLabel == null) return;
+
+        if (!string.IsNullOrEmpty(_overrideStateText))
+        {
+            stateLabel.text = _overrideStateText;
+            return;
+        }
 
         switch (gm.State)
         {

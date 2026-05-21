@@ -2309,6 +2309,8 @@ MonoBehaviour:
   gameSceneRef:
     RawValue: 2
   maxPlayerPerRoom: 4
+  mainMenuSceneName: MainMenu
+  disconnectMessageDuration: 2
   inputActions: {fileID: -944628639613478452, guid: 722082e3b25f8524cbc124e2a95d5fe3, type: 3}
   actionMapName: Player
   moveActionName: Move
@@ -4575,7 +4577,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 0.7058824}
+  m_Color: {r: 0, g: 0, b: 0, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

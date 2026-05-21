@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Fusion;
@@ -15,6 +16,9 @@ public class NetworkRunnerController : MonoBehaviourSingleton<NetworkRunnerContr
     [SerializeField] private SceneRef gameSceneRef;
     [SerializeField] private int maxPlayerPerRoom = 4;
     [SerializeField] private string mainMenuSceneName = "MainMenu";
+    [SerializeField] private float disconnectMessageDuration = 2f;
+
+    public static string PendingMessage { get; set; }
 
     [Header("Input")]
     [SerializeField] private InputActionAsset inputActions;
@@ -158,11 +162,21 @@ public class NetworkRunnerController : MonoBehaviourSingleton<NetworkRunnerContr
         if (_handledDisconnect) return;
         _handledDisconnect = true;
 
-        Debug.Log($"[NetworkRunnerController] Unexpected disconnect ({reason}). Returning to main menu.");
-        OnError?.Invoke("Conexión perdida con el host. Volviendo al menú...");
+        const string inGameMessage = "Conexión perdida. Volviendo al menú...";
+        const string postLoadMessage = "La sesión anterior terminó por desconexión.";
+
+        Debug.Log($"[NetworkRunnerController] Unexpected disconnect ({reason}). {inGameMessage}");
+        OnError?.Invoke(inGameMessage);
+        PendingMessage = postLoadMessage;
 
         if (SceneManager.GetActiveScene().name != mainMenuSceneName)
-            SceneManager.LoadScene(mainMenuSceneName);
+            StartCoroutine(ReturnToMainMenuAfterDelay(disconnectMessageDuration));
+    }
+
+    private IEnumerator ReturnToMainMenuAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        SceneManager.LoadScene(mainMenuSceneName);
     }
 
     public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
