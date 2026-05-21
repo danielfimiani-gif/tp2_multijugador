@@ -235,5 +235,5 @@ public class NetworkRunnerController : MonoBehaviourSingleton<NetworkRunnerContr
     public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
     public void OnSceneLoadDone(NetworkRunner runner) { }
     public void OnSceneLoadStart(NetworkRunner runner) { }
-#pragma warning restore UNT0006 // Incorrect message signature
+#pragma warning restore UNT0006
 }

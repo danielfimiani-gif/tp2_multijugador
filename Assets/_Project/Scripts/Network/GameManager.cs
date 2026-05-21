@@ -153,6 +153,8 @@ public class GameManager : NetworkBehaviour
             return;
         }
 
+        if (_spawnedPlayers.Count < 2) return;
+
         int aliveCount = 0;
         PlayerRef lastAlive = PlayerRef.None;
         foreach (var kvp in _spawnedPlayers)
