@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Character_03_OVC
+  m_Controller: {fileID: 9100000, guid: 5262218fa5f83cc469780cff94d4035c, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: -8126030336418339126, guid: 5262218fa5f83cc469780cff94d4035c, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 0bf820a243ac9fa439d5b88e4ecccd0c, type: 2}
+  - m_OriginalClip: {fileID: 7946409362529149380, guid: 5262218fa5f83cc469780cff94d4035c, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 6f5382ac9d112474eae471554de29576, type: 2}
+  - m_OriginalClip: {fileID: -884414393144675609, guid: 5262218fa5f83cc469780cff94d4035c, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: d499ac5ec6322e043baf41596a844bae, type: 2}
+  - m_OriginalClip: {fileID: 1109889325623703007, guid: 5262218fa5f83cc469780cff94d4035c, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 1d8522f70764c2b42952dd6fc7e087b6, type: 2}
+  - m_OriginalClip: {fileID: 2479765023927898221, guid: 5262218fa5f83cc469780cff94d4035c, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 438a26ad75576674b81339f7216d0de6, type: 2}
+  - m_OriginalClip: {fileID: -9161140922951285065, guid: 5262218fa5f83cc469780cff94d4035c, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 8c3a333be84167b44bc9c516cdc52d91, type: 2}
+  - m_OriginalClip: {fileID: 182537360277980303, guid: 5262218fa5f83cc469780cff94d4035c, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 8c1f5e65dc63efa4e85f05df00a88f24, type: 2}
+  - m_OriginalClip: {fileID: -7509071495781039900, guid: 5262218fa5f83cc469780cff94d4035c, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: fdc8176045d726a4784f3892120b2362, type: 2}
+  - m_OriginalClip: {fileID: 4666029128048154957, guid: 5262218fa5f83cc469780cff94d4035c, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: eac2910a49c73234d9d85c47b23692d7, type: 2}
