@@ -33,7 +33,7 @@ public class HUD : MonoBehaviour
         if (backToMenuButton != null) backToMenuButton.onClick.AddListener(OnBackToMenu);
 
         foreach (var slot in slots)
-            if (slot != null && slot.root != null) slot.root.SetActive(false);
+            if (slot != null && slot.Root != null) slot.Root.SetActive(false);
     }
 
     private void OnDestroy()
@@ -117,28 +117,28 @@ public class HUD : MonoBehaviour
         for (; idx < _sortedPlayers.Count && idx < slots.Length; idx++)
         {
             var slot = slots[idx];
-            if (slot == null || slot.root == null) continue;
+            if (slot == null || slot.Root == null) continue;
 
-            slot.root.SetActive(true);
+            slot.Root.SetActive(true);
 
             var player = _sortedPlayers[idx];
             var obj = runner.GetPlayerObject(player);
 
-            if (slot.nameLabel != null) slot.nameLabel.text = $"P{idx + 1}";
+            if (slot.NameLabel != null) slot.NameLabel.text = $"P{idx + 1}";
 
             if (obj != null)
             {
                 var combat = obj.GetComponent<PlayerCombat>();
                 var stock = obj.GetComponent<PlayerStock>();
 
-                if (slot.damageLabel != null)
-                    slot.damageLabel.text = combat != null ? $"{Mathf.RoundToInt(combat.DamagePercent)}%" : "0%";
-                if (slot.livesLabel != null)
-                    slot.livesLabel.text = stock != null ? $"Vidas: {Mathf.Max(0, stock.Lives)}" : "Vidas: -";
-                if (slot.kosLabel != null)
+                if (slot.DamageLabel != null)
+                    slot.DamageLabel.text = combat != null ? $"{Mathf.RoundToInt(combat.DamagePercent)}%" : "0%";
+                if (slot.LivesLabel != null)
+                    slot.LivesLabel.text = stock != null ? $"Vidas: {Mathf.Max(0, stock.Lives)}" : "Vidas: -";
+                if (slot.KosLabel != null)
                 {
                     gm.Kos.TryGet(player, out var kos);
-                    slot.kosLabel.text = $"KOs: {kos}";
+                    slot.KosLabel.text = $"KOs: {kos}";
                 }
             }
         }

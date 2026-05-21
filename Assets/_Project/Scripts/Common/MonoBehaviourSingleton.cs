@@ -4,19 +4,19 @@ public class MonoBehaviourSingleton<T> : MonoBehaviour where T : MonoBehaviour
 {
     [SerializeField] private bool isPersistent = true;
 
-    private static T instance;
+    private static T _instance;
 
     public static T Instance
     {
         get
         {
-            if (!instance)
-                instance = FindFirstObjectByType<T>();
+            if (!_instance)
+                _instance = FindFirstObjectByType<T>();
 
-            if (!instance)
-                instance = new GameObject(typeof(T).Name).AddComponent<T>();
+            if (!_instance)
+                _instance = new GameObject(typeof(T).Name).AddComponent<T>();
 
-            return instance;
+            return _instance;
         }
     }
 
