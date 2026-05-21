@@ -40,10 +40,8 @@ public class NetworkRunnerController : MonoBehaviourSingleton<NetworkRunnerContr
     private bool _handledDisconnect;
 
     public NetworkRunner Runner => _runner;
-    public int MaxPlayersPerRoom => maxPlayerPerRoom;
 
     public event Action<List<SessionInfo>> SessionListUpdated;
-    public event Action OnJoinedLobby;
     public event Action<string> OnError;
     public event Action<PlayerRef> PlayerJoined;
     public event Action<PlayerRef> PlayerLeft;
@@ -107,8 +105,7 @@ public class NetworkRunnerController : MonoBehaviourSingleton<NetworkRunnerContr
     {
         if (_runner == null) return;
         var result = await _runner.JoinSessionLobby(SessionLobby.Custom, lobbyName);
-        if (result.Ok) OnJoinedLobby?.Invoke();
-        else OnError?.Invoke(result.ErrorMessage);
+        if (!result.Ok) OnError?.Invoke(result.ErrorMessage);
     }
 
     public async Task CreateRoom(string roomName)

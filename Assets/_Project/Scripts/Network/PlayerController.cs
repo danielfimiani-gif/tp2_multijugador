@@ -35,7 +35,6 @@ public class PlayerController : NetworkBehaviour
 
     private NetworkCharacterController _ncc;
     private Animator _animator;
-    private NetworkMecanimAnimator _netAnimator;
     private PlayerStock _stock;
     private int _speedHash;
     private int _groundedHash;
@@ -44,13 +43,10 @@ public class PlayerController : NetworkBehaviour
     private int _jumpHash;
     private int _lastAppliedCharacterIndex = -2;
 
-    public Animator Animator => _animator;
-
     public override void Spawned()
     {
         _ncc = GetComponent<NetworkCharacterController>();
         _animator = GetComponentInChildren<Animator>();
-        _netAnimator = GetComponent<NetworkMecanimAnimator>();
         _stock = GetComponent<PlayerStock>();
         JumpsRemaining = maxJumps;
 

@@ -55,7 +55,6 @@ public class PlayerCombat : NetworkBehaviour
     private NetworkCharacterController _ncc;
     private PlayerStock _stock;
     private Animator _animator;
-    private NetworkMecanimAnimator _netAnimator;
     private int[] _attackHashes;
     private int _hitHash;
 
@@ -67,7 +66,6 @@ public class PlayerCombat : NetworkBehaviour
         _ncc = GetComponent<NetworkCharacterController>();
         _stock = GetComponent<PlayerStock>();
         _animator = GetComponentInChildren<Animator>();
-        _netAnimator = GetComponent<NetworkMecanimAnimator>();
 
         _attackHashes = new int[attackTriggers.Length];
         for (int i = 0; i < attackTriggers.Length; i++)
@@ -149,8 +147,6 @@ public class PlayerCombat : NetworkBehaviour
             victimNCC.Velocity = kb;
 
         victim.HitTriggerSeq++;
-
-        RPC_OnHit(victim.Object.InputAuthority, Object.InputAuthority, damage, kb);
     }
 
     public override void Render()
@@ -168,11 +164,6 @@ public class PlayerCombat : NetworkBehaviour
             _lastSeenHitSeq = HitTriggerSeq;
             if (_animator != null) _animator.SetTrigger(_hitHash);
         }
-    }
-
-    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    private void RPC_OnHit(PlayerRef victim, PlayerRef attacker, float damage, Vector3 knockback)
-    {
     }
 
     private int GetEffectiveMaxStep()

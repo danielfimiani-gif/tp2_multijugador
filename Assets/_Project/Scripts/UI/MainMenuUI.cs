@@ -74,7 +74,6 @@ public class MainMenuUI : MonoBehaviour
     {
         if (_runner == null) return;
         _runner.SessionListUpdated += HandleSessionListUpdated;
-        _runner.OnJoinedLobby += HandleJoinedLobby;
         _runner.OnError += HandleError;
     }
 
@@ -82,7 +81,6 @@ public class MainMenuUI : MonoBehaviour
     {
         if (_runner == null) return;
         _runner.SessionListUpdated -= HandleSessionListUpdated;
-        _runner.OnJoinedLobby -= HandleJoinedLobby;
         _runner.OnError -= HandleError;
     }
 
@@ -162,8 +160,6 @@ public class MainMenuUI : MonoBehaviour
         ShowLoading($"Uniéndose a '{roomName}'...");
         _ = NetworkRunnerController.Instance.JoinRoom(roomName);
     }
-
-    private void HandleJoinedLobby() { }
 
     private void HandleError(string message)
     {

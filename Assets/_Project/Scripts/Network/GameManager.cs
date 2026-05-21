@@ -30,7 +30,6 @@ public class GameManager : NetworkBehaviour
     [Networked, Capacity(8)] public NetworkDictionary<PlayerRef, int> Kos => default;
 
     public int MinPlayers => minPlayers;
-    public float MatchDurationSeconds => matchDurationSeconds;
 
     public Vector3 GetRespawnPoint(int playerIndex)
     {
@@ -43,7 +42,6 @@ public class GameManager : NetworkBehaviour
     private readonly Dictionary<PlayerRef, NetworkObject> _spawnedPlayers = new();
 
     public IReadOnlyList<PlayerRef> ActivePlayers => _activePlayers;
-    public IReadOnlyDictionary<PlayerRef, NetworkObject> SpawnedPlayers => _spawnedPlayers;
 
     public override void Spawned()
     {
