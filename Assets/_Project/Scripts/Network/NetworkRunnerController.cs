@@ -18,8 +18,6 @@ public class NetworkRunnerController : MonoBehaviourSingleton<NetworkRunnerContr
     [SerializeField] private string mainMenuSceneName = "MainMenu";
     [SerializeField] private float disconnectMessageDuration = 2f;
 
-    public static string PendingMessage { get; set; }
-
     [Header("Input")]
     [SerializeField] private InputActionAsset inputActions;
     [SerializeField] private string actionMapName = "Player";
@@ -29,15 +27,15 @@ public class NetworkRunnerController : MonoBehaviourSingleton<NetworkRunnerContr
 
     private NetworkRunner _runner;
     private NetworkSceneManagerDefault _sceneManager;
-
     private InputAction _moveAction;
     private InputAction _jumpAction;
     private InputAction _attackAction;
     private bool _jumpQueued;
     private bool _attackQueued;
-
     private bool _isLeavingVoluntarily;
     private bool _handledDisconnect;
+
+    public static string PendingMessage { get; set; }
 
     public NetworkRunner Runner => _runner;
 
@@ -68,38 +66,6 @@ public class NetworkRunnerController : MonoBehaviourSingleton<NetworkRunnerContr
         _jumpAction?.Disable();
         _attackAction?.Disable();
     }
-
-    private void InitInputActions()
-    {
-        if (inputActions == null)
-        {
-            Debug.LogError("[NetworkRunnerController] Input Actions asset not assigned");
-            return;
-        }
-
-        var map = inputActions.FindActionMap(actionMapName, throwIfNotFound: false);
-        if (map == null)
-        {
-            Debug.LogError($"[NetworkRunnerController] Action map '{actionMapName}' not found in {inputActions.name}");
-            return;
-        }
-
-        _moveAction = map.FindAction(moveActionName, throwIfNotFound: false);
-        _jumpAction = map.FindAction(jumpActionName, throwIfNotFound: false);
-        _attackAction = map.FindAction(attackActionName, throwIfNotFound: false);
-
-        if (_moveAction == null) Debug.LogError($"[NetworkRunnerController] Action '{moveActionName}' not found");
-        if (_jumpAction == null) Debug.LogError($"[NetworkRunnerController] Action '{jumpActionName}' not found");
-        if (_attackAction == null) Debug.LogError($"[NetworkRunnerController] Action '{attackActionName}' not found");
-
-        if (_jumpAction != null) _jumpAction.performed += OnJumpPerformed;
-        if (_attackAction != null) _attackAction.performed += OnAttackPerformed;
-
-        map.Enable();
-    }
-
-    private void OnJumpPerformed(InputAction.CallbackContext _) => _jumpQueued = true;
-    private void OnAttackPerformed(InputAction.CallbackContext _) => _attackQueued = true;
 
     public async Task JoinLobby()
     {
@@ -151,29 +117,6 @@ public class NetworkRunnerController : MonoBehaviourSingleton<NetworkRunnerContr
         if (_runner == null) return;
         _isLeavingVoluntarily = true;
         await _runner.Shutdown();
-    }
-
-    private void HandleUnexpectedDisconnect(string reason)
-    {
-        if (_isLeavingVoluntarily) return;
-        if (_handledDisconnect) return;
-        _handledDisconnect = true;
-
-        const string inGameMessage = "Conexión perdida. Volviendo al menú...";
-        const string postLoadMessage = "La sesión anterior terminó por desconexión.";
-
-        Debug.Log($"[NetworkRunnerController] Unexpected disconnect ({reason}). {inGameMessage}");
-        OnError?.Invoke(inGameMessage);
-        PendingMessage = postLoadMessage;
-
-        if (SceneManager.GetActiveScene().name != mainMenuSceneName)
-            StartCoroutine(ReturnToMainMenuAfterDelay(disconnectMessageDuration));
-    }
-
-    private IEnumerator ReturnToMainMenuAfterDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        SceneManager.LoadScene(mainMenuSceneName);
     }
 
     public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
@@ -233,4 +176,59 @@ public class NetworkRunnerController : MonoBehaviourSingleton<NetworkRunnerContr
     public void OnSceneLoadDone(NetworkRunner runner) { }
     public void OnSceneLoadStart(NetworkRunner runner) { }
 #pragma warning restore UNT0006
+
+    private void InitInputActions()
+    {
+        if (inputActions == null)
+        {
+            Debug.LogError("[NetworkRunnerController] Input Actions asset not assigned");
+            return;
+        }
+
+        var map = inputActions.FindActionMap(actionMapName, throwIfNotFound: false);
+        if (map == null)
+        {
+            Debug.LogError($"[NetworkRunnerController] Action map '{actionMapName}' not found in {inputActions.name}");
+            return;
+        }
+
+        _moveAction = map.FindAction(moveActionName, throwIfNotFound: false);
+        _jumpAction = map.FindAction(jumpActionName, throwIfNotFound: false);
+        _attackAction = map.FindAction(attackActionName, throwIfNotFound: false);
+
+        if (_moveAction == null) Debug.LogError($"[NetworkRunnerController] Action '{moveActionName}' not found");
+        if (_jumpAction == null) Debug.LogError($"[NetworkRunnerController] Action '{jumpActionName}' not found");
+        if (_attackAction == null) Debug.LogError($"[NetworkRunnerController] Action '{attackActionName}' not found");
+
+        if (_jumpAction != null) _jumpAction.performed += OnJumpPerformed;
+        if (_attackAction != null) _attackAction.performed += OnAttackPerformed;
+
+        map.Enable();
+    }
+
+    private void OnJumpPerformed(InputAction.CallbackContext _) => _jumpQueued = true;
+    private void OnAttackPerformed(InputAction.CallbackContext _) => _attackQueued = true;
+
+    private void HandleUnexpectedDisconnect(string reason)
+    {
+        if (_isLeavingVoluntarily) return;
+        if (_handledDisconnect) return;
+        _handledDisconnect = true;
+
+        const string inGameMessage = "Conexión perdida. Volviendo al menú...";
+        const string postLoadMessage = "La sesión anterior terminó por desconexión.";
+
+        Debug.Log($"[NetworkRunnerController] Unexpected disconnect ({reason}). {inGameMessage}");
+        OnError?.Invoke(inGameMessage);
+        PendingMessage = postLoadMessage;
+
+        if (SceneManager.GetActiveScene().name != mainMenuSceneName)
+            StartCoroutine(ReturnToMainMenuAfterDelay(disconnectMessageDuration));
+    }
+
+    private IEnumerator ReturnToMainMenuAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        SceneManager.LoadScene(mainMenuSceneName);
+    }
 }

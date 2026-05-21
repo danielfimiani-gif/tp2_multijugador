@@ -4,16 +4,6 @@ using UnityEngine;
 
 public class GameManager : NetworkBehaviour
 {
-    public enum MatchState : byte
-    {
-        WaitingForPlayers = 0,
-        Countdown = 1,
-        InProgress = 2,
-        Ended = 3
-    }
-
-    public static GameManager Instance { get; private set; }
-
     [Header("Match Settings")]
     [SerializeField] private int minPlayers = 2;
     [SerializeField] private float matchDurationSeconds = 180f;
@@ -23,25 +13,19 @@ public class GameManager : NetworkBehaviour
     [SerializeField] private NetworkPrefabRef playerPrefab;
     [SerializeField] private Transform[] spawnPoints;
 
+    private readonly List<PlayerRef> _activePlayers = new();
+    private readonly Dictionary<PlayerRef, NetworkObject> _spawnedPlayers = new();
+
+    public static GameManager Instance { get; private set; }
+
+    public int MinPlayers => minPlayers;
+    public IReadOnlyList<PlayerRef> ActivePlayers => _activePlayers;
+
     [Networked] public MatchState State { get; set; }
     [Networked] public TickTimer MatchTimer { get; set; }
     [Networked] public TickTimer CountdownTimer { get; set; }
     [Networked] public PlayerRef Winner { get; private set; }
     [Networked, Capacity(8)] public NetworkDictionary<PlayerRef, int> Kos => default;
-
-    public int MinPlayers => minPlayers;
-
-    public Vector3 GetRespawnPoint(int playerIndex)
-    {
-        if (spawnPoints != null && spawnPoints.Length > 0)
-            return spawnPoints[Mathf.Abs(playerIndex) % spawnPoints.Length].position;
-        return new Vector3(0f, 2f, 0f);
-    }
-
-    private readonly List<PlayerRef> _activePlayers = new();
-    private readonly Dictionary<PlayerRef, NetworkObject> _spawnedPlayers = new();
-
-    public IReadOnlyList<PlayerRef> ActivePlayers => _activePlayers;
 
     public override void Spawned()
     {
@@ -90,6 +74,22 @@ public class GameManager : NetworkBehaviour
                 CheckEndConditions();
                 break;
         }
+    }
+
+    public Vector3 GetRespawnPoint(int playerIndex)
+    {
+        if (spawnPoints != null && spawnPoints.Length > 0)
+            return spawnPoints[Mathf.Abs(playerIndex) % spawnPoints.Length].position;
+        return new Vector3(0f, 2f, 0f);
+    }
+
+    public void RegisterKO(PlayerRef killer, PlayerRef victim)
+    {
+        if (!HasStateAuthority) return;
+        if (killer == PlayerRef.None) return;
+
+        Kos.TryGet(killer, out var current);
+        Kos.Set(killer, current + 1);
     }
 
     private void HandlePlayerJoined(PlayerRef player)
@@ -204,15 +204,6 @@ public class GameManager : NetworkBehaviour
         Winner = winner;
         Debug.Log($"[GameManager] Match ended. Winner: {winner}");
         RPC_OnMatchEnd(winner);
-    }
-
-    public void RegisterKO(PlayerRef killer, PlayerRef victim)
-    {
-        if (!HasStateAuthority) return;
-        if (killer == PlayerRef.None) return;
-
-        Kos.TryGet(killer, out var current);
-        Kos.Set(killer, current + 1);
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]

@@ -11,18 +11,19 @@ public class PlayerStock : NetworkBehaviour
     [Header("Kill zone")]
     [SerializeField] private float killHeight = -10f;
 
-    [Networked] public int Lives { get; private set; }
-    [Networked] public NetworkBool IsAlive { get; private set; }
-    [Networked] private TickTimer RespawnTimer { get; set; }
-    [Networked] private TickTimer InvincibilityTimer { get; set; }
-
-    public bool IsInvincible => !InvincibilityTimer.ExpiredOrNotRunning(Runner);
-    public bool IsEliminated => Lives <= 0 && !IsAlive;
-
     private NetworkCharacterController _ncc;
     private PlayerCombat _combat;
     private Renderer[] _renderers;
     private Vector3 _deadPosition;
+
+    [Networked] private TickTimer RespawnTimer { get; set; }
+    [Networked] private TickTimer InvincibilityTimer { get; set; }
+
+    [Networked] public int Lives { get; private set; }
+    [Networked] public NetworkBool IsAlive { get; private set; }
+
+    public bool IsInvincible => !InvincibilityTimer.ExpiredOrNotRunning(Runner);
+    public bool IsEliminated => Lives <= 0 && !IsAlive;
 
     public override void Spawned()
     {
@@ -53,13 +54,13 @@ public class PlayerStock : NetworkBehaviour
             if (Lives > 0 && RespawnTimer.Expired(Runner))
             {
                 var gm = GameManager.Instance;
-                if (gm == null || gm.State == GameManager.MatchState.InProgress)
+                if (gm == null || gm.State == MatchState.InProgress)
                     Respawn();
             }
             return;
         }
 
-        if (GameManager.Instance != null && GameManager.Instance.State != GameManager.MatchState.InProgress)
+        if (GameManager.Instance != null && GameManager.Instance.State != MatchState.InProgress)
             return;
 
         if (transform.position.y < killHeight)

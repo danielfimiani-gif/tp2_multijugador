@@ -25,14 +25,6 @@ public class PlayerController : NetworkBehaviour
     [SerializeField] private string deadBoolParam = "Dead";
     [SerializeField] private string jumpTriggerParam = "Jump";
 
-    [Networked] public int JumpsRemaining { get; private set; }
-    [Networked] public sbyte Facing { get; private set; } = 1;
-    [Networked] public int CharacterIndex { get; private set; } = -1;
-    [Networked] private NetworkButtons PreviousButtons { get; set; }
-    [Networked] private int JumpTriggerSeq { get; set; }
-
-    private int _lastSeenJumpSeq;
-
     private NetworkCharacterController _ncc;
     private Animator _animator;
     private PlayerStock _stock;
@@ -42,6 +34,14 @@ public class PlayerController : NetworkBehaviour
     private int _deadHash;
     private int _jumpHash;
     private int _lastAppliedCharacterIndex = -2;
+    private int _lastSeenJumpSeq;
+
+    [Networked] private NetworkButtons PreviousButtons { get; set; }
+    [Networked] private int JumpTriggerSeq { get; set; }
+
+    [Networked] public int JumpsRemaining { get; private set; }
+    [Networked] public sbyte Facing { get; private set; } = 1;
+    [Networked] public int CharacterIndex { get; private set; } = -1;
 
     public override void Spawned()
     {
@@ -68,32 +68,6 @@ public class PlayerController : NetworkBehaviour
         ApplyCharacterOverride();
     }
 
-    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void RPC_SetCharacterIndex(int idx)
-    {
-        CharacterIndex = idx;
-    }
-
-    private void ApplyCharacterOverride()
-    {
-        if (_animator == null) return;
-        if (characterOverrides == null || characterOverrides.Length == 0) return;
-
-        var idx = CharacterIndex;
-        if (idx < 0 || idx >= characterOverrides.Length)
-            idx = Mathf.Abs(Object.InputAuthority.RawEncoded) % characterOverrides.Length;
-
-        var chosen = characterOverrides[idx];
-        if (chosen != null) _animator.runtimeAnimatorController = chosen;
-        _lastAppliedCharacterIndex = idx;
-
-        if (visualRoot != null && characterVisualScales != null && idx < characterVisualScales.Length)
-        {
-            var s = characterVisualScales[idx];
-            if (s > 0f) visualRoot.localScale = new Vector3(s, s, s);
-        }
-    }
-
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
         CameraFollow2D.Unregister(transform);
@@ -102,7 +76,7 @@ public class PlayerController : NetworkBehaviour
     public override void FixedUpdateNetwork()
     {
         if (_stock != null && !_stock.IsAlive) return;
-        if (GameManager.Instance != null && GameManager.Instance.State != GameManager.MatchState.InProgress) return;
+        if (GameManager.Instance != null && GameManager.Instance.State != MatchState.InProgress) return;
         if (!GetInput<NetInput>(out var input)) return;
 
         var dir = new Vector3(input.Horizontal, 0f, 0f);
@@ -162,5 +136,31 @@ public class PlayerController : NetworkBehaviour
             if (Mathf.Abs(Mathf.DeltaAngle(current.y, targetY)) > 0.5f)
                 visualRoot.localRotation = Quaternion.Euler(current.x, targetY, current.z);
         }
+    }
+
+    private void ApplyCharacterOverride()
+    {
+        if (_animator == null) return;
+        if (characterOverrides == null || characterOverrides.Length == 0) return;
+
+        var idx = CharacterIndex;
+        if (idx < 0 || idx >= characterOverrides.Length)
+            idx = Mathf.Abs(Object.InputAuthority.RawEncoded) % characterOverrides.Length;
+
+        var chosen = characterOverrides[idx];
+        if (chosen != null) _animator.runtimeAnimatorController = chosen;
+        _lastAppliedCharacterIndex = idx;
+
+        if (visualRoot != null && characterVisualScales != null && idx < characterVisualScales.Length)
+        {
+            var s = characterVisualScales[idx];
+            if (s > 0f) visualRoot.localScale = new Vector3(s, s, s);
+        }
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_SetCharacterIndex(int idx)
+    {
+        CharacterIndex = idx;
     }
 }

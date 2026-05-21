@@ -4,8 +4,6 @@ using UnityEngine;
 [RequireComponent(typeof(Camera))]
 public class CameraFollow2D : MonoBehaviour
 {
-    private static readonly List<Transform> _targets = new();
-
     [Header("Follow")]
     [SerializeField] private Vector3 offset = new(0f, 2f, -15f);
     [SerializeField] private float positionSmoothTime = 0.25f;
@@ -16,19 +14,11 @@ public class CameraFollow2D : MonoBehaviour
     [SerializeField] private float zoomPadding = 4f;
     [SerializeField] private float zoomSmoothTime = 0.3f;
 
+    private static readonly List<Transform> _targets = new();
+
     private Camera _cam;
     private Vector3 _posVelocity;
     private float _sizeVelocity;
-
-    public static void Register(Transform t)
-    {
-        if (t != null && !_targets.Contains(t)) _targets.Add(t);
-    }
-
-    public static void Unregister(Transform t)
-    {
-        _targets.Remove(t);
-    }
 
     private void Awake()
     {
@@ -71,5 +61,15 @@ public class CameraFollow2D : MonoBehaviour
             var desired = Mathf.Clamp(Mathf.Max(sizeForWidth, sizeForHeight), minSize, maxSize);
             _cam.orthographicSize = Mathf.SmoothDamp(_cam.orthographicSize, desired, ref _sizeVelocity, zoomSmoothTime);
         }
+    }
+
+    public static void Register(Transform t)
+    {
+        if (t != null && !_targets.Contains(t)) _targets.Add(t);
+    }
+
+    public static void Unregister(Transform t)
+    {
+        _targets.Remove(t);
     }
 }

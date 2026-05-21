@@ -34,8 +34,20 @@ public class PlayerCombat : NetworkBehaviour
     [SerializeField] private string[] attackTriggers = { "Attack1", "Attack2", "Attack3" };
     [SerializeField] private string hitTrigger = "Hit";
 
-    [Networked] public float DamagePercent { get; set; }
-    [Networked] public PlayerRef LastHitter { get; set; }
+    private static readonly Collider[] _overlapBuffer = new Collider[16];
+
+    private readonly List<KeyValuePair<AnimationClip, AnimationClip>> _overridesScratch = new();
+    private PlayerController _controller;
+    private NetworkCharacterController _ncc;
+    private PlayerStock _stock;
+    private Animator _animator;
+    private int[] _attackHashes;
+    private int _hitHash;
+    private int _lastSeenAttackSeq;
+    private int _lastSeenHitSeq;
+    private int _cachedEffectiveMaxStep = -1;
+    private RuntimeAnimatorController _lastSeenController;
+
     [Networked] private TickTimer AttackCooldown { get; set; }
     [Networked] private TickTimer ComboWindow { get; set; }
     [Networked] private int ComboStep { get; set; }
@@ -44,21 +56,8 @@ public class PlayerCombat : NetworkBehaviour
     [Networked] private byte AttackTriggerStep { get; set; }
     [Networked] private int HitTriggerSeq { get; set; }
 
-    private int _lastSeenAttackSeq;
-    private int _lastSeenHitSeq;
-
-    private int _cachedEffectiveMaxStep = -1;
-    private RuntimeAnimatorController _lastSeenController;
-    private readonly List<KeyValuePair<AnimationClip, AnimationClip>> _overridesScratch = new();
-
-    private PlayerController _controller;
-    private NetworkCharacterController _ncc;
-    private PlayerStock _stock;
-    private Animator _animator;
-    private int[] _attackHashes;
-    private int _hitHash;
-
-    private static readonly Collider[] _overlapBuffer = new Collider[16];
+    [Networked] public float DamagePercent { get; set; }
+    [Networked] public PlayerRef LastHitter { get; set; }
 
     public override void Spawned()
     {
@@ -84,7 +83,7 @@ public class PlayerCombat : NetworkBehaviour
     {
         if (!HasStateAuthority) return;
         if (_stock != null && !_stock.IsAlive) return;
-        if (GameManager.Instance != null && GameManager.Instance.State != GameManager.MatchState.InProgress) return;
+        if (GameManager.Instance != null && GameManager.Instance.State != MatchState.InProgress) return;
         if (!GetInput<NetInput>(out var input)) return;
 
         var pressed = input.Buttons.GetPressed(PreviousButtons);
@@ -94,6 +93,34 @@ public class PlayerCombat : NetworkBehaviour
         if (!AttackCooldown.ExpiredOrNotRunning(Runner)) return;
 
         PerformAttack();
+    }
+
+    public override void Render()
+    {
+        if (AttackTriggerSeq != _lastSeenAttackSeq)
+        {
+            _lastSeenAttackSeq = AttackTriggerSeq;
+            var step = (int)AttackTriggerStep;
+            if (_animator != null && step > 0 && step - 1 < _attackHashes.Length)
+                _animator.SetTrigger(_attackHashes[step - 1]);
+        }
+
+        if (HitTriggerSeq != _lastSeenHitSeq)
+        {
+            _lastSeenHitSeq = HitTriggerSeq;
+            if (_animator != null) _animator.SetTrigger(_hitHash);
+        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        sbyte facing = 1;
+        var ctrl = GetComponent<PlayerController>();
+        if (ctrl != null && Application.isPlaying)
+            facing = ctrl.Facing;
+
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireCube(transform.position + new Vector3(facing * hitboxDistance, 0f, 0f), hitboxSize);
     }
 
     private void PerformAttack()
@@ -149,23 +176,6 @@ public class PlayerCombat : NetworkBehaviour
         victim.HitTriggerSeq++;
     }
 
-    public override void Render()
-    {
-        if (AttackTriggerSeq != _lastSeenAttackSeq)
-        {
-            _lastSeenAttackSeq = AttackTriggerSeq;
-            var step = (int)AttackTriggerStep;
-            if (_animator != null && step > 0 && step - 1 < _attackHashes.Length)
-                _animator.SetTrigger(_attackHashes[step - 1]);
-        }
-
-        if (HitTriggerSeq != _lastSeenHitSeq)
-        {
-            _lastSeenHitSeq = HitTriggerSeq;
-            if (_animator != null) _animator.SetTrigger(_hitHash);
-        }
-    }
-
     private int GetEffectiveMaxStep()
     {
         if (_animator == null) return maxComboSteps;
@@ -208,16 +218,5 @@ public class PlayerCombat : NetworkBehaviour
                 return kvp.Value != null && kvp.Value != kvp.Key;
         }
         return false;
-    }
-
-    private void OnDrawGizmosSelected()
-    {
-        sbyte facing = 1;
-        var ctrl = GetComponent<PlayerController>();
-        if (ctrl != null && Application.isPlaying)
-            facing = ctrl.Facing;
-
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireCube(transform.position + new Vector3(facing * hitboxDistance, 0f, 0f), hitboxSize);
     }
 }

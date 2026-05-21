@@ -18,10 +18,10 @@ public class ParallaxLayer : MonoBehaviour
     [Tooltip("Cantidad de copias por cada lado (izq/der). 1 alcanza para la mayoría de casos.")]
     [SerializeField] private int copiesPerSide = 1;
 
+    private readonly List<Transform> _copies = new();
     private Transform _cam;
     private Vector3 _startPos;
     private float _spriteWidth;
-    private readonly List<Transform> _copies = new();
 
     private void Start()
     {
@@ -38,6 +38,39 @@ public class ParallaxLayer : MonoBehaviour
             if (_copies[i] != null)
                 Destroy(_copies[i].gameObject);
         _copies.Clear();
+    }
+
+    private void LateUpdate()
+    {
+        if (_cam == null)
+        {
+            if (Camera.main != null) _cam = Camera.main.transform;
+            else return;
+        }
+
+        var camPos = _cam.position;
+        var xPos = _startPos.x + camPos.x * (1f - parallaxFactor);
+        var yPos = _startPos.y + (verticalParallax ? camPos.y * (1f - parallaxFactor) : 0f);
+
+        if (infiniteHorizontal && _spriteWidth > 0.01f)
+        {
+            var halfWidth = _spriteWidth * 0.5f;
+            var rel = Mathf.Repeat(xPos - camPos.x + halfWidth, _spriteWidth) - halfWidth;
+            xPos = camPos.x + rel;
+        }
+
+        transform.position = new Vector3(xPos, yPos, _startPos.z);
+
+        if (infiniteHorizontal && _spriteWidth > 0.01f)
+        {
+            for (int i = 0; i < _copies.Count; i++)
+            {
+                if (_copies[i] == null) continue;
+                var side = (i % 2 == 0) ? -1 : 1;
+                var n = (i / 2) + 1;
+                _copies[i].position = new Vector3(xPos + side * n * _spriteWidth, yPos, _startPos.z);
+            }
+        }
     }
 
     private void CreateCopies()
@@ -74,38 +107,5 @@ public class ParallaxLayer : MonoBehaviour
         if (template.drawMode != SpriteDrawMode.Simple) sr.size = template.size;
 
         return copy;
-    }
-
-    private void LateUpdate()
-    {
-        if (_cam == null)
-        {
-            if (Camera.main != null) _cam = Camera.main.transform;
-            else return;
-        }
-
-        var camPos = _cam.position;
-        var xPos = _startPos.x + camPos.x * (1f - parallaxFactor);
-        var yPos = _startPos.y + (verticalParallax ? camPos.y * (1f - parallaxFactor) : 0f);
-
-        if (infiniteHorizontal && _spriteWidth > 0.01f)
-        {
-            var halfWidth = _spriteWidth * 0.5f;
-            var rel = Mathf.Repeat(xPos - camPos.x + halfWidth, _spriteWidth) - halfWidth;
-            xPos = camPos.x + rel;
-        }
-
-        transform.position = new Vector3(xPos, yPos, _startPos.z);
-
-        if (infiniteHorizontal && _spriteWidth > 0.01f)
-        {
-            for (int i = 0; i < _copies.Count; i++)
-            {
-                if (_copies[i] == null) continue;
-                var side = (i % 2 == 0) ? -1 : 1;
-                var n = (i / 2) + 1;
-                _copies[i].position = new Vector3(xPos + side * n * _spriteWidth, yPos, _startPos.z);
-            }
-        }
     }
 }

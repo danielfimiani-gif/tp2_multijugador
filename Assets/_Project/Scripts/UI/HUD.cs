@@ -7,22 +7,12 @@ using UnityEngine.UI;
 
 public class HUD : MonoBehaviour
 {
-    [System.Serializable]
-    public class PlayerSlot
-    {
-        public GameObject root;
-        public TMP_Text nameLabel;
-        public TMP_Text damageLabel;
-        public TMP_Text livesLabel;
-        public TMP_Text kosLabel;
-    }
-
     [Header("Global")]
     [SerializeField] private TMP_Text timerLabel;
     [SerializeField] private TMP_Text stateLabel;
 
     [Header("Player Slots (max 4)")]
-    [SerializeField] private PlayerSlot[] slots = new PlayerSlot[4];
+    [SerializeField] private HudPlayerSlot[] slots = new HudPlayerSlot[4];
 
     [Header("End Game")]
     [SerializeField] private GameObject endGamePanel;
@@ -30,6 +20,7 @@ public class HUD : MonoBehaviour
     [SerializeField] private Button backToMenuButton;
     [SerializeField] private string mainMenuSceneName = "MainMenu";
 
+    private readonly List<PlayerRef> _sortedPlayers = new();
     private NetworkRunnerController _runner;
     private string _overrideStateText;
 
@@ -50,11 +41,6 @@ public class HUD : MonoBehaviour
         if (_runner != null) _runner.OnError -= HandleRunnerError;
     }
 
-    private void HandleRunnerError(string message)
-    {
-        _overrideStateText = message;
-    }
-
     private void Update()
     {
         var gm = GameManager.Instance;
@@ -66,6 +52,11 @@ public class HUD : MonoBehaviour
         UpdateEndGame(gm);
     }
 
+    private void HandleRunnerError(string message)
+    {
+        _overrideStateText = message;
+    }
+
     private void UpdateTimer(GameManager gm)
     {
         if (timerLabel == null) return;
@@ -73,10 +64,10 @@ public class HUD : MonoBehaviour
         float seconds = 0f;
         switch (gm.State)
         {
-            case GameManager.MatchState.Countdown:
+            case MatchState.Countdown:
                 seconds = gm.CountdownTimer.RemainingTime(gm.Runner) ?? 0f;
                 break;
-            case GameManager.MatchState.InProgress:
+            case MatchState.InProgress:
                 seconds = gm.MatchTimer.RemainingTime(gm.Runner) ?? 0f;
                 break;
         }
@@ -98,22 +89,20 @@ public class HUD : MonoBehaviour
 
         switch (gm.State)
         {
-            case GameManager.MatchState.WaitingForPlayers:
+            case MatchState.WaitingForPlayers:
                 stateLabel.text = $"Esperando jugadores... ({gm.ActivePlayers.Count}/{gm.MinPlayers})";
                 break;
-            case GameManager.MatchState.Countdown:
+            case MatchState.Countdown:
                 stateLabel.text = "Preparate!";
                 break;
-            case GameManager.MatchState.InProgress:
+            case MatchState.InProgress:
                 stateLabel.text = "";
                 break;
-            case GameManager.MatchState.Ended:
+            case MatchState.Ended:
                 stateLabel.text = "Fin del match";
                 break;
         }
     }
-
-    private readonly List<PlayerRef> _sortedPlayers = new();
 
     private void UpdateSlots(GameManager gm)
     {
@@ -164,7 +153,7 @@ public class HUD : MonoBehaviour
     private void UpdateEndGame(GameManager gm)
     {
         if (endGamePanel == null) return;
-        var ended = gm.State == GameManager.MatchState.Ended;
+        var ended = gm.State == MatchState.Ended;
         if (endGamePanel.activeSelf != ended)
             endGamePanel.SetActive(ended);
 
